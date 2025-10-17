@@ -9,19 +9,19 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
-# === Config baza de date SQLite ===
+# === Config database SQLite ===
 DATABASE_URL = "sqlite:///./todolist.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# === Secret & settings pentru JWT ===
-SECRET_KEY = "schimba_acest_secret"  # schimba inainte de productie
+# === Secret & settings for JWT ===
+SECRET_KEY = "schimba_acest_secret"  # change before production
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 ora (schimba dupa nevoie)
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour (changes by needed)
 
-# === Modele SQLAlchemy ===
+# === Models SQLAlchemy ===
 class Todolist(Base):
     __tablename__ = "todolist"
 
@@ -29,7 +29,7 @@ class Todolist(Base):
     task_name = Column(String, nullable=False)
     task_description = Column(String, nullable=False)
     status = Column(String, nullable=False)
-    owner_username = Column(String, nullable=False, index=True)  # legatura cu userul
+    owner_username = Column(String, nullable=False, index=True)  # link with user
 
 class User(Base):
     __tablename__ = "users"
@@ -39,7 +39,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=True)
 
-# Creeaza tabele daca nu exista
+# Create tables if not exist
 Base.metadata.create_all(bind=engine)
 
 # === Pydantic schemas ===
@@ -87,7 +87,7 @@ def get_db():
     finally:
         db.close()
 
-# === Functii autentificare ===
+# === Functions for auth ===
 def get_user(db: Session, username: str) -> Optional[User]:
     return db.query(User).filter(User.username == username).first()
 
@@ -109,7 +109,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# === Dependency pentru user curent ===
+# === Dependency for user curent ===
 from fastapi import Security
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -131,9 +131,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
-# optional: verificare activ
+# optional: check activ
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    # aici poti verifica flag-uri (is_active etc.)
+    # here can check flags (is_active etc.)
     return current_user
 
 # === FastAPI app ===
@@ -169,7 +169,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-# === Endpoint POST pentru adaugare task (protejat) ===
+# === Endpoint POST for add task (protected) ===
 @app.post("/todolist", response_model=dict)
 def create_task(request: TodoRequest, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     new_todolist = Todolist(
@@ -181,9 +181,9 @@ def create_task(request: TodoRequest, current_user: User = Depends(get_current_a
     db.add(new_todolist)
     db.commit()
     db.refresh(new_todolist)
-    return {"message": "Task salvat cu succes", "id": new_todolist.id}
+    return {"message": "Task saved succesfully", "id": new_todolist.id}
 
-# === Endpoint GET pentru vizualizarea task-urilor existente in baza de date (doar ale userului curent) ===
+# === Endpoint GET for show existing tasks in database (only from current user) ===
 @app.get("/taskuri_existente", response_model=List[TodoResponse])
 def get_tasks(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     taskuri = db.query(Todolist).filter(Todolist.owner_username == current_user.username).all()
@@ -197,16 +197,5 @@ def get_tasks(current_user: User = Depends(get_current_active_user), db: Session
         )
         for p in taskuri
     ]
-
-#testare
-# 1) Creez un utilizator (inregistrare):
-#curl -X POST http://127.0.0.1:8080/users/ -H "Content-Type: application/json" -d "{\"username\":\"Geo\",\"password\":\"parola123\",\"full_name\":\"George Sarbu\"}"
-# 2) Obtin token (OAuth2 Password Grant)
-#curl -X POST http://127.0.0.1:8080/token -H "Content-Type: application/x-www-form-urlencoded" -d "username=Geo&password=parola123"
-# raspuns: {"access_token":"...", "token_type":"bearer"}
-# 3) Creez un task (folosind tokenul):
-#curl -X POST http://127.0.0.1:8080/todolist -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJHZW8iLCJleHAiOjE3NjAzNjA5Mzd9.gfyANyGyzYGIkyaIT2tIE_hzbKxPCAie-bhF8wGVC7Y"  -H "Content-Type: application/json" -d "{\"task_name\":\"curatenie\",\"task_description\":\"spalat vase\",\"status\":\"pending\"}"
-# 4) Listez taskurile userului curent:
-#curl -X GET http://127.0.0.1:8080/taskuri_existente -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJHZW8iLCJleHAiOjE3NjAzNjA5Mzd9.gfyANyGyzYGIkyaIT2tIE_hzbKxPCAie-bhF8wGVC7Y"
 
 
