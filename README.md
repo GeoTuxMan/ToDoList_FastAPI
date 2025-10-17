@@ -15,7 +15,7 @@ Browser: http://127.0.0.1:8080/docs   # will see the Swagger UI
 
 ![test](browser.png)
 
-Test:
+Test (you can test from browser or from console):
 
 # 1) Create new user (register):
 >curl -X POST http://127.0.0.1:8080/users/ -H "Content-Type: application/json" -d
