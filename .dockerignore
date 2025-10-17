@@ -1,0 +1,13 @@
+# excludem fisiere temporare si inutile
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+.git/
+.gitignore
+README.md
+
+# excludem folderul de date (va fi montat ca volum)
+data/

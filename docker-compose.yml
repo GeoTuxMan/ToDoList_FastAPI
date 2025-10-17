@@ -1,0 +1,15 @@
+services:
+  to_do_list_api:
+    build: .
+    image: to_do_list_api:latest
+    container_name: to_do_list_api
+    ports:
+      - "8080:8080"
+    volumes: []
+     # - todolist_data:/app/data
+    environment:
+      - SECRET_KEY=schimba_acest_secret
+    restart: unless-stopped
+    
+#volumes:
+#  todolist_data:
